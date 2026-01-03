@@ -1,44 +1,43 @@
-# Stage 1: Build
-FROM maven:3.9.9-amazoncorretto-21-debian AS build
+# Stage 1: Build stage
+FROM maven:3.9-amazoncorretto-21 AS builder
+
+# Set working directory
 WORKDIR /app
 
-# Kopiera pom och src
-COPY pom.xml ./
+# Copy pom.xml and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source code
 COPY src ./src
 
 # Dummy secret för build
 ENV JWT_SECRET=dummysecret
 ENV JWT_EXPIRATION=3600000
 ENV BACKEND_PORT=8080
+ENV MASTER_KEY=some_secure_key
 
-# Bygg jar
+# Build the application
 RUN mvn clean package -DskipTests
 
-# Stage 2: Runtime
+# Stage 2: Runtime stage
 FROM amazoncorretto:21-alpine
-WORKDIR /app
 
-# Uppdatera paket och installera curl (valfritt)
-RUN apk update && apk upgrade --no-cache && apk add curl
+# Set working directory
+WORKDIR /app
 
 # Sätt fallback JWT_SECRET och BACKEND_PORT
 ENV JWT_SECRET=dummysecret
 ENV JWT_EXPIRATION=3600000
 ENV BACKEND_PORT=8080
+ENV MASTER_KEY=some_secure_key
 
-# Kopiera jar från build
-COPY --from=build /app/target/*.jar app.jar
+# Copy the JAR file from the build stage
+COPY --from=builder /app/target/*.jar app.jar
 
-# Skapa uppladdningsmapp och ge rätt ägarskap
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
-    && mkdir -p /app/uploads \
-    && chown -R appuser:appgroup /app/uploads
-
-# Skapa icke-root-användare
-USER appuser
-
-# Exponera port
+# Expose port 8080
 EXPOSE 8080
+Expose 8081
 
-# Starta applikationen
-CMD ["java", "-jar", "/app/app.jar"]
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
