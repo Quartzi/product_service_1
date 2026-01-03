@@ -14,7 +14,7 @@ COPY src ./src
 # Dummy secret för build
 ENV JWT_SECRET=dummysecret
 ENV JWT_EXPIRATION=3600000
-ENV BACKEND_PORT=8080
+ENV BACKEND_PORT=8081
 ENV MASTER_KEY=some_secure_key
 
 # Build the application
